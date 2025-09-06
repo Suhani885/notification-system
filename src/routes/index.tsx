@@ -3,9 +3,6 @@ import type { FormProps } from 'antd';
 import { Form, Input, Typography } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, UserOutlined } from '@ant-design/icons';
 import { useRouter } from '@tanstack/react-router';
-import { getToken } from "firebase/messaging";
-import { messaging } from "../firebase/firebaseConfig";
-import 'dotenv/config';
 
 const { Title, Text } = Typography;
 
@@ -34,19 +31,28 @@ const requestNotificationPermission = async (): Promise<NotificationPermission> 
 };
 
 const handleNotificationPermission = async () => {
+  if (typeof window === 'undefined') {
+    return 'denied';
+  }
+
   try {
     const permission = await requestNotificationPermission();
     
     switch (permission) {
       case 'granted':
-        const token = await getToken(messaging, {
-          vapidKey: process.env.VITE_APP_VAPID_KEY,
-        });
-        console.log("Token generated : ", token);
-        new Notification('Welcome to NexTalk!', {
-          body: 'You will now receive notifications for new messages',
-          icon: '/favicon.ico'
-        });
+        const { messaging } = await import("../firebase/firebaseConfig");
+        const { getToken } = await import("firebase/messaging");
+        
+        if (messaging) {
+          const token = await getToken(messaging, {
+            vapidKey: import.meta.env.VITE_APP_VAPID_KEY,
+          });
+          console.log("Token generated : ", token);
+          new Notification('Welcome to NexTalk!', {
+            body: 'You will now receive notifications for new messages',
+            icon: '/favicon.ico'
+          });
+        }
         break;
       case 'denied':
         alert("You denied for the notification");
@@ -74,6 +80,7 @@ function Home() {
     try {
       await handleNotificationPermission();
       router.navigate({ to: "/dashboard" });
+      
     } catch (error) {
       console.error('Login error:', error);
     }
