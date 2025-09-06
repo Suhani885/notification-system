@@ -3,7 +3,10 @@ import type { FormProps } from 'antd';
 import { Form, Input, Typography } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, UserOutlined } from '@ant-design/icons';
 import { useRouter } from '@tanstack/react-router';
-// import { toast } from 'sonner';
+import { getToken } from "firebase/messaging";
+import { messaging } from "../firebase/firebaseConfig";
+import 'dotenv/config';
+
 const { Title, Text } = Typography;
 
 type FieldType = {
@@ -36,14 +39,17 @@ const handleNotificationPermission = async () => {
     
     switch (permission) {
       case 'granted':
-        console.log('Notification permission granted');
+        const token = await getToken(messaging, {
+          vapidKey: process.env.VITE_APP_VAPID_KEY,
+        });
+        console.log("Token generated : ", token);
         new Notification('Welcome to NexTalk!', {
           body: 'You will now receive notifications for new messages',
           icon: '/favicon.ico'
         });
         break;
       case 'denied':
-        console.log('Notification permission denied');
+        alert("You denied for the notification");
         break;
       case 'default':
         console.log('Notification permission dismissed');
@@ -62,42 +68,12 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const router = useRouter()
-  // const { data, isLoading: loading, isSuccess } = useQuery({
-  //   ...coreLoginRetrieveOptions(),
-  //   retry: false,
-  // });
-  // if (isSuccess) {
-  //   router.navigate({ to: "/dashboard" })
-  // }
 
   const onFinish: FormProps<FieldType>['onFinish'] = async (values) => {
     console.log('Login attempt:', values);
-    const token: string = btoa(values.userName + ":" + values.password);
     try {
-      // loginmutation.mutate(
-      //   {
-      //     headers: {
-      //       Authorization: `Basic ${token}`,
-      //     },
-      //   },
-      //   {
-      //     onSuccess: async (data) => {
-      //       toast.success(data.msg)
-      //       
-      //       await handleNotificationPermission();
-      //       
-      //       router.navigate({ to: "/dashboard" });
-      //     },
-      //     onError: (error) => {
-      //       console.log(error)
-      //       toast.error("error")
-      //     },
-      //   }
-      // );
-
       await handleNotificationPermission();
-      // router.navigate({ to: "/dashboard" });
-      
+      router.navigate({ to: "/dashboard" });
     } catch (error) {
       console.error('Login error:', error);
     }
