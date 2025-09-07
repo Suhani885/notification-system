@@ -24,7 +24,6 @@ import type { MenuProps } from "antd";
 import api from "../utils/axios";
 import { getMessaging, getToken, deleteToken } from "firebase/messaging";
 import toast from "react-hot-toast";
-
 interface Notification {
   id: number;
   title: string;
@@ -40,7 +39,7 @@ interface UserProfile {
   avatar?: string | null;
 }
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_auth/dashboard")({
   component: RouteComponent,
 });
 
@@ -106,7 +105,7 @@ function RouteComponent() {
   };
 
   const handleLogout = async (): Promise<void> => {
-    const messaging = getMessaging();
+    const { messaging } = await import("../firebase/firebaseConfig");
     const fcmToken = await getToken(messaging);
     api
       .post("logout", { token: fcmToken })

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   UserOutlined,
@@ -23,12 +24,14 @@ import {
   Dropdown,
   Upload,
 } from "antd";
-import type { ColumnsType, TableRowSelection } from "antd/es/table";
+import type { ColumnsType } from "antd/es/table";
+import { TableRowSelection } from "antd/es/table/interface";
 import type { MenuProps } from "antd";
 import api from "../utils/axios";
+import toast from "react-hot-toast";
 
 interface User {
-  id: string;
+  id: number;
   username: string;
   email: string;
 }
@@ -40,43 +43,60 @@ interface NotificationForm {
 }
 
 interface UserProfile {
-  name: string;
-  avatar: string | null;
+  username: string;
+  email: string;
+  avatar?: string | null;
 }
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/_auth/admin")({
   component: AdminDashboard,
 });
 
-const fetchUsers = async (): Promise<User[]> => {
+const fetchUsers = async (): Promise<User[] | undefined> => {
   try {
-    const response = await api.get("/admin/users");
-    return response.data.data || response.data;
+    const response = await api.get("getUsers");
+    return response.data.users;
   } catch (error) {
     alert("Failed to fetch users");
+    return undefined;
   }
 };
 
 const sendNotification = async (
   userIds: string[],
-  notification: NotificationForm
+  notification: NotificationForm & {
+    image?: any;
+    actionUrl?: string;
+  }
 ): Promise<void> => {
   try {
-    await api.post("/admin/notifications/send", {
-      userIds,
-      ...notification,
+    const formData = new FormData();
+    formData.append("userIds", JSON.stringify(userIds));
+    formData.append("title", notification.title);
+    formData.append("body", notification.body);
+
+    if (notification.image && notification.image.file) {
+      formData.append("image", notification.image.file);
+    }
+    if (notification.actionUrl) {
+      formData.append("actionUrl", notification.actionUrl);
+    }
+
+    await api.post("/notifications", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
   } catch (error) {
     alert("Failed to send notification");
   }
 };
 
-const fetchUserProfile = async (): Promise<UserProfile> => {
+const fetchUserProfile = async (): Promise<UserProfile | undefined> => {
   try {
-    const response = await api.get("/user/profile");
-    return response.data.data || response.data;
+    const response = await api.get("/login");
+    return response.data.user;
   } catch (error) {
     alert("Failed to fetch user profile");
+    return undefined;
   }
 };
 
@@ -84,15 +104,16 @@ function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [sending, setSending] = useState<boolean>(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "Admin",
+    username: "Admin",
+    email: "",
     avatar: null,
   });
   const [form] = Form.useForm();
-
+  const router = useRouter();
   useEffect(() => {
     const loadData = async () => {
       setInitialLoading(true);
@@ -102,7 +123,9 @@ function AdminDashboard() {
           fetchUserProfile(),
         ]);
         setUsers(Array.isArray(usersData) ? usersData : []);
-        setUserProfile(profileData);
+        if (profileData) {
+          setUserProfile(profileData);
+        }
       } catch (error) {
         message.error("Failed to load admin data");
       } finally {
@@ -113,7 +136,22 @@ function AdminDashboard() {
   }, []);
 
   const handleLogout = (): void => {
-    window.location.href = "/";
+    api
+      .post("logout")
+      .then(async () => {
+        try {
+          router.navigate({ to: "/" });
+          toast.success("Logged out successfully");
+        } catch (firebaseErr) {
+          console.warn("Failed to delete FCM token:", firebaseErr);
+        }
+      })
+      .catch((error) => {
+        toast.error(
+          error.response?.data?.message ||
+            "Failed to log out. Please try again."
+        );
+      });
   };
 
   const columns: ColumnsType<User> = [
@@ -137,12 +175,12 @@ function AdminDashboard() {
 
   const rowSelection: TableRowSelection<User> = {
     selectedRowKeys: selectedUserIds,
-    onChange: (selectedRowKeys) => {
-      setSelectedUserIds(selectedRowKeys as string[]);
+    onChange: (selectedRowKeys: any) => {
+      setSelectedUserIds(selectedRowKeys as number[]);
     },
-    onSelectAll: (selected, selectedRows, changeRows) => {
+    onSelectAll: (selected: any) => {
       if (selected) {
-        const allIds = users.map((user) => user.id);
+        const allIds = users.map((user) => Number(user.id));
         setSelectedUserIds(allIds);
       } else {
         setSelectedUserIds([]);
@@ -182,8 +220,8 @@ function AdminDashboard() {
     };
     console.log(" New notification:", data);
     try {
-      await sendNotification(selectedUserIds, values);
-      message.success(`Notification sent to ${selectedUserIds.length} user(s)`);
+      await sendNotification(selectedUserIds.map(String), values);
+      toast.success(`Notification sent to ${selectedUserIds.length} user(s)`);
       setIsModalOpen(false);
       form.resetFields();
       setSelectedUserIds([]);
@@ -252,7 +290,7 @@ function AdminDashboard() {
                     icon={<UserOutlined />}
                   />
                   <span className="hidden sm:inline text-gray-700">
-                    {userProfile.name}
+                    {userProfile.username.toUpperCase()}
                   </span>
                 </Button>
               </Dropdown>
@@ -264,7 +302,10 @@ function AdminDashboard() {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {userProfile.name}! 👋
+            Welcome back,{" "}
+            {userProfile.username.charAt(0).toUpperCase() +
+              userProfile.username.slice(1)}
+            ! 👋
           </h2>
           <p className="text-gray-600">
             Manage users and send notifications from your admin panel.
@@ -372,42 +413,17 @@ function AdminDashboard() {
           </Form.Item>
 
           <Form.Item
-            label="User Action"
-            name="actionType"
+            label="Redirect URL"
+            name="actionUrl"
             rules={[
-              { required: true, message: "Please select an action type" },
+              { required: true, message: "Please enter redirect URL" },
+              { type: "url", message: "Please enter a valid URL" },
             ]}
           >
-            <Select placeholder="Select action type">
-              <Select.Option value="none">No Action Required</Select.Option>
-              <Select.Option value="markAsRead">Mark as Read</Select.Option>
-              <Select.Option value="redirect">Redirect to URL</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            noStyle
-            shouldUpdate={(prevValues, currentValues) =>
-              prevValues.actionType !== currentValues.actionType
-            }
-          >
-            {({ getFieldValue }) =>
-              getFieldValue("actionType") === "redirect" ? (
-                <Form.Item
-                  label="Redirect URL"
-                  name="actionUrl"
-                  rules={[
-                    { required: true, message: "Please enter redirect URL" },
-                    { type: "url", message: "Please enter a valid URL" },
-                  ]}
-                >
-                  <Input
-                    placeholder="https://example.com"
-                    prefix={<LinkOutlined />}
-                  />
-                </Form.Item>
-              ) : null
-            }
+            <Input
+              placeholder="https://example.com"
+              prefix={<LinkOutlined />}
+            />
           </Form.Item>
 
           <div className="flex justify-end space-x-2">

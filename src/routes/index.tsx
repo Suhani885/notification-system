@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormProps } from "antd";
 import { Form, Input, Typography, message } from "antd";
 import {
@@ -145,6 +145,28 @@ function Home() {
     }
   };
 
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const response = await api.get("login");
+        const loginData = response.data;
+        if (loginData && loginData.user) {
+          if (loginData.user.is_superuser) {
+            if (window.location.pathname !== "/admin") {
+              router.navigate({ to: "/admin" });
+            }
+          } else {
+            if (window.location.pathname !== "/dashboard") {
+              router.navigate({ to: "/dashboard" });
+            }
+          }
+        }
+      } catch (error) {
+        console.log("user not logged in");
+      }
+    };
+    checkLoginStatus();
+  }, []);
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-slate-700">

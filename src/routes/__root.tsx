@@ -6,7 +6,6 @@ import { NotFound } from "~/components/NotFound";
 import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 import { Toaster } from "react-hot-toast";
-
 export const Route = createRootRoute({
   head: () => ({
     meta: [
