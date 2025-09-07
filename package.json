@@ -13,6 +13,7 @@
     "@tanstack/react-router-devtools": "^1.131.35",
     "@tanstack/react-start": "^1.131.35",
     "antd": "^5.27.2",
+    "axios": "^1.11.0",
     "dotenv": "^17.2.2",
     "firebase": "^12.2.1",
     "react": "^19.0.0",

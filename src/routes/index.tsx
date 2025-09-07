@@ -1,14 +1,34 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import type { FormProps } from 'antd';
-import { Form, Input, Typography } from 'antd';
+import { Form, Input, Typography, message } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, UserOutlined } from '@ant-design/icons';
 import { useRouter } from '@tanstack/react-router';
+import api from '../utils/axios';
 
 const { Title, Text } = Typography;
 
 type FieldType = {
   userName?: string;
   password?: string;
+};
+
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+const loginUser = async (credentials: LoginCredentials) => {
+  const response = await api.post('/auth/login', credentials);
+  return response.data;
+};
+
+const saveFCMToken = async (token: string): Promise<void> => {
+  try {
+    await api.post('/user/fcm-token', { fcmToken: token });
+  } catch (error) {
+    console.error('Failed to save FCM token:', error);
+  }
 };
 
 const onFinishFailed: FormProps<FieldType>['onFinishFailed'] = (errorInfo) => {
@@ -30,7 +50,7 @@ const requestNotificationPermission = async (): Promise<NotificationPermission> 
   return Notification.permission;
 };
 
-const handleNotificationPermission = async () => {
+const handleNotificationPermission = async (): Promise<NotificationPermission> => {
   if (typeof window === 'undefined') {
     return 'denied';
   }
@@ -40,22 +60,31 @@ const handleNotificationPermission = async () => {
     
     switch (permission) {
       case 'granted':
-        const { messaging } = await import("../firebase/firebaseConfig");
-        const { getToken } = await import("firebase/messaging");
-        
-        if (messaging) {
-          const token = await getToken(messaging, {
-            vapidKey: import.meta.env.VITE_APP_VAPID_KEY,
-          });
-          console.log("Token generated : ", token);
-          new Notification('Welcome to NexTalk!', {
-            body: 'You will now receive notifications for new messages',
-            icon: '/favicon.ico'
-          });
+        try {
+          const { messaging } = await import("../firebase/firebaseConfig");
+          const { getToken } = await import("firebase/messaging");
+          
+          if (messaging) {
+            const token = await getToken(messaging, {
+              vapidKey: import.meta.env.VITE_APP_VAPID_KEY,
+            });
+            console.log("FCM Token generated:", token);
+            
+            if (token) {
+              await saveFCMToken(token);
+            }
+            
+            new Notification('Welcome to NexTalk!', {
+              body: 'You will now receive notifications for new messages',
+              icon: '/favicon.ico'
+            });
+          }
+        } catch (error) {
+          console.error('Firebase messaging error:', error);
         }
         break;
       case 'denied':
-        alert("You denied for the notification");
+        message.warning("Notifications are disabled. You won't receive push notifications.");
         break;
       case 'default':
         console.log('Notification permission dismissed');
@@ -73,16 +102,35 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  const router = useRouter()
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const onFinish: FormProps<FieldType>['onFinish'] = async (values) => {
-    console.log('Login attempt:', values);
+    if (!values.userName || !values.password) return;
+    
+    setLoading(true);
+    
     try {
-      await handleNotificationPermission();
-      router.navigate({ to: "/dashboard" });
+      const loginData = await loginUser({
+        username: values.userName,
+        password: values.password,
+      });
+
+      if (loginData.success && loginData.data) {
+        message.success('Login successful!');
+        
+        await handleNotificationPermission();
+        
+        router.navigate({ to: "/dashboard" });
+      } else {
+        message.error(loginData.message || 'Login failed');
+      }
       
-    } catch (error) {
+    } catch (error: any) {
+      message.error(error.response?.data?.message || error.message || 'Login failed');
       console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,12 +205,14 @@ function Home() {
                   name="userName"
                   rules={[
                     { required: true, message: 'Please enter your User Name' },
+                    { min: 3, message: 'Username must be at least 3 characters' },
                   ]}
                   className="mb-6"
                 >
                   <Input
                     prefix={<UserOutlined className="text-gray-400 mr-1" />}
                     placeholder="Enter your username"
+                    disabled={loading}
                     className="rounded-xl border-2 border-gray-200 hover:border-blue-400 focus:border-gray-700 transition-colors duration-200"
                     style={{
                       height: '52px',
@@ -185,6 +235,7 @@ function Home() {
                   <Input.Password
                     prefix={<LockOutlined className="text-gray-400 mr-1" />}
                     placeholder="Enter your password"
+                    disabled={loading}
                     iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                     className="rounded-xl border-2 border-gray-200 hover:border-blue-400 focus:border-gray-700 transition-colors duration-200"
                     style={{
@@ -199,9 +250,19 @@ function Home() {
                 <Form.Item className="mb-0">
                   <button
                     type="submit"
-                    className="h-14 w-full rounded-xl bg-gradient-to-r from-black via-gray-900 to-slate-700 font-bold text-lg text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 border-none cursor-pointer focus:outline-none focus:ring-4 focus:ring-gray-300/50"
+                    disabled={loading}
+                    className={`h-14 w-full rounded-xl bg-gradient-to-r from-black via-gray-900 to-slate-700 font-bold text-lg text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 border-none cursor-pointer focus:outline-none focus:ring-4 focus:ring-gray-300/50 ${
+                      loading ? 'opacity-70 cursor-not-allowed transform-none' : ''
+                    }`}
                   >
-                    Sign In
+                    {loading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Signing In...</span>
+                      </div>
+                    ) : (
+                      'Sign In'
+                    )}
                   </button>
                 </Form.Item>
               </Form>
