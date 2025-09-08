@@ -86,11 +86,6 @@ const handleNotificationPermission =
               if (token) {
                 await saveToken(token);
               }
-
-              new Notification("Welcome to NexTalk!", {
-                body: "You will now receive notifications for new messages",
-                icon: "/favicon.ico",
-              });
             }
           } catch (error) {
             console.error("Firebase messaging error:", error);

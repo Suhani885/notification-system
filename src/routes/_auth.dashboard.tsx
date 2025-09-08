@@ -23,7 +23,7 @@ import {
 import { Loader } from "~/components/Loader";
 import type { MenuProps } from "antd";
 import api from "../utils/axios";
-import { getToken, deleteToken } from "firebase/messaging";
+import { deleteToken } from "firebase/messaging";
 import toast from "react-hot-toast";
 interface Notification {
   id: number;
@@ -109,7 +109,7 @@ function RouteComponent() {
     const { messaging } = await import("../firebase/firebaseConfig");
     const fcmToken = localStorage.getItem("fcmToken");
     if (!fcmToken) {
-      toast.error("FCM token not found.");
+      toast.error("Failed to log out. Please try again.");
       return;
     }
     api
@@ -118,10 +118,10 @@ function RouteComponent() {
         try {
           await deleteToken(messaging);
           router.navigate({ to: "/" });
-          toast.success("Logged out successfully");
           localStorage.removeItem("fcmToken");
+          toast.success("Logged out successfully");
         } catch (firebaseErr) {
-          console.warn("Failed to delete FCM token:", firebaseErr);
+          console.warn("Failed to delete token:", firebaseErr);
         }
       })
       .catch((error) => {
@@ -139,12 +139,6 @@ function RouteComponent() {
       <div className="px-4 py-3  border-gray-600 flex justify-between items-center">
         <h3 className="font-semibold text-gray-800">Notifications</h3>
       </div>
-
-      {loading && (
-        <div className="p-8 text-center">
-          <Spin size="large" />
-        </div>
-      )}
 
       {!loading && notifications.length === 0 && (
         <div className="p-8">
@@ -229,11 +223,6 @@ function RouteComponent() {
       label: "Profile",
     },
     {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
-    },
-    {
       type: "divider",
     },
     {
@@ -310,7 +299,7 @@ function RouteComponent() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
+        <div className="mb-10">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome back,{" "}
             {userProfile.username.charAt(0).toUpperCase() +
@@ -322,7 +311,7 @@ function RouteComponent() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <Card className="hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -368,45 +357,10 @@ function RouteComponent() {
           </Card>
         </div>
 
-        <Card title="Recent Activity" className="mb-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-              <Avatar icon={<UserOutlined />} />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">
-                  Sarah sent you a message
-                </p>
-                <p className="text-sm text-gray-600">2 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-              <Avatar icon={<UserOutlined />} />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">
-                  John joined your group chat
-                </p>
-                <p className="text-sm text-gray-600">15 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-              <Avatar icon={<SettingOutlined />} />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">
-                  System update completed
-                </p>
-                <p className="text-sm text-gray-600">1 hour ago</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
         <Card title="Quick Actions">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Button type="primary" size="large" icon={<MessageOutlined />}>
               New Chat
-            </Button>
-            <Button size="large" icon={<UserOutlined />}>
-              Add Contact
             </Button>
             <Button size="large" icon={<SettingOutlined />}>
               Settings

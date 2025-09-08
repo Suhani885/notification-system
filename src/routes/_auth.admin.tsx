@@ -84,8 +84,9 @@ const sendNotification = async (
     await api.post("/notifications", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-  } catch (error) {
-    alert("Failed to send notification");
+    toast.success("Notification sent!");
+  } catch (error:any) {
+    toast.error(error.response?.data?.message || "Failed to send notification")
   }
 };
 
@@ -102,7 +103,6 @@ const fetchUserProfile = async (): Promise<UserProfile | undefined> => {
 function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [sending, setSending] = useState<boolean>(false);
@@ -115,7 +115,7 @@ function AdminDashboard() {
   const router = useRouter();
   useEffect(() => {
     const loadData = async () => {
-      setInitialLoading(true);
+      setLoading(true);
       try {
         const [usersData, profileData] = await Promise.all([
           fetchUsers(),
@@ -128,7 +128,7 @@ function AdminDashboard() {
       } catch (error) {
         message.error("Failed to load admin data");
       } finally {
-        setInitialLoading(false);
+        setLoading(false);
       }
     };
     loadData();
@@ -220,7 +220,6 @@ function AdminDashboard() {
     console.log(" New notification:", data);
     try {
       await sendNotification(selectedUserIds.map(String), values);
-      toast.success(`Notification sent to ${selectedUserIds.length} user(s)`);
       setIsModalOpen(false);
       form.resetFields();
       setSelectedUserIds([]);
@@ -238,11 +237,6 @@ function AdminDashboard() {
       label: "Profile",
     },
     {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
-    },
-    {
       type: "divider",
     },
     {
@@ -253,14 +247,6 @@ function AdminDashboard() {
       onClick: handleLogout,
     },
   ];
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spin size="large" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -397,7 +383,7 @@ function AdminDashboard() {
             />
           </Form.Item>
 
-          <Form.Item label="Image (Optional)" name="image">
+          <Form.Item label="Image" name="image">
             <Upload
               listType="picture-card"
               maxCount={1}
