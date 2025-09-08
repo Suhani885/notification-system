@@ -19,7 +19,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Avatar,
   Dropdown,
   Upload,

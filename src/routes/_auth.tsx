@@ -16,15 +16,12 @@ export const Route = createFileRoute("/_auth")({
         if (currentPath !== "/admin") {
           return redirect({ to: "/admin" });
         }
-        // Stay on /admin if already there
         return null;
       }
 
-      // Non-admin user
       if (currentPath !== "/dashboard") {
         return redirect({ to: "/dashboard" });
       }
-      // Stay on /dashboard if already there
       return null;
     } catch (error) {
       return redirect({ to: "/" });

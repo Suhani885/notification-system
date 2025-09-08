@@ -22,7 +22,7 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 import api from "../utils/axios";
-import { getMessaging, getToken, deleteToken } from "firebase/messaging";
+import { getToken, deleteToken } from "firebase/messaging";
 import toast from "react-hot-toast";
 interface Notification {
   id: number;

@@ -33,12 +33,12 @@ const loginUser = async (credentials: LoginCredentials) => {
   }
 };
 
-const saveFCMToken = async (token: string): Promise<void> => {
+const saveToken = async (token: string): Promise<void> => {
   try {
     await api.post("addToken", { token: token });
   } catch (error: any) {
-    console.error("Failed to save FCM token:", error);
-    toast.error(error.response?.data?.message || "Failed to save FCM token");
+    console.error("Failed to save token:", error);
+    toast.error(error.response?.data?.message || "Failed to save token");
   }
 };
 
@@ -49,7 +49,7 @@ const onFinishFailed: FormProps<FieldType>["onFinishFailed"] = (errorInfo) => {
 const requestNotificationPermission =
   async (): Promise<NotificationPermission> => {
     if (!("Notification" in window)) {
-      console.log("This browser does not support notifications");
+      console.log("This browser does not support notifications!");
       return "denied";
     }
 
@@ -80,10 +80,10 @@ const handleNotificationPermission =
               const token = await getToken(messaging, {
                 vapidKey: import.meta.env.VITE_APP_VAPID_KEY,
               });
-              console.log("FCM Token generated:", token);
+              console.log("Token generated:", token);
 
               if (token) {
-                await saveFCMToken(token);
+                await saveToken(token);
               }
 
               new Notification("Welcome to NexTalk!", {
@@ -130,7 +130,7 @@ function Home() {
 
       if (loginData && loginData.user) {
         if (loginData.user.is_superuser) {
-          toast.success("Admin logged in successfully");
+          toast.success("Admin login successful!");
           router.navigate({ to: "/admin" });
           return;
         } else {
