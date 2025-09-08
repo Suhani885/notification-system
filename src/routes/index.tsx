@@ -12,7 +12,7 @@ import { useRouter } from "@tanstack/react-router";
 import api from "../utils/axios";
 import toast from "react-hot-toast";
 const { Title, Text } = Typography;
-
+import { Loader } from "~/components/Loader";
 type FieldType = {
   userName?: string;
   password?: string;
@@ -36,6 +36,7 @@ const loginUser = async (credentials: LoginCredentials) => {
 const saveToken = async (token: string): Promise<void> => {
   try {
     await api.post("addToken", { token: token });
+    localStorage.setItem("fcmToken", token);
   } catch (error: any) {
     console.error("Failed to save token:", error);
     toast.error(error.response?.data?.message || "Failed to save token");
@@ -167,6 +168,10 @@ function Home() {
     };
     checkLoginStatus();
   }, []);
+  if (loading) {
+    return <Loader />;
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-slate-700">

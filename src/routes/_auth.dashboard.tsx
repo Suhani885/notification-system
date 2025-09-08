@@ -20,6 +20,7 @@ import {
   Spin,
   message,
 } from "antd";
+import { Loader } from "~/components/Loader";
 import type { MenuProps } from "antd";
 import api from "../utils/axios";
 import { getToken, deleteToken } from "firebase/messaging";
@@ -106,7 +107,11 @@ function RouteComponent() {
 
   const handleLogout = async (): Promise<void> => {
     const { messaging } = await import("../firebase/firebaseConfig");
-    const fcmToken = await getToken(messaging);
+    const fcmToken = localStorage.getItem("fcmToken");
+    if (!fcmToken) {
+      toast.error("FCM token not found.");
+      return;
+    }
     api
       .post("logout", { token: fcmToken })
       .then(async () => {
@@ -114,6 +119,7 @@ function RouteComponent() {
           await deleteToken(messaging);
           router.navigate({ to: "/" });
           toast.success("Logged out successfully");
+          localStorage.removeItem("fcmToken");
         } catch (firebaseErr) {
           console.warn("Failed to delete FCM token:", firebaseErr);
         }
@@ -247,6 +253,9 @@ function RouteComponent() {
     );
   }
 
+  if (loading) {
+    return <Loader />;
+  }
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b border-gray-200">
